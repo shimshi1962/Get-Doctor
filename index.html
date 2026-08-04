@@ -559,5 +559,37 @@ a{color:inherit}
   </footer>
 
 </div>
+<script>
+      const APPS_SCRIPT_URL = 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL';
+      document.getElementById('waitlistForm').addEventListener('submit', function(e) {
+          e.preventDefault();
+          
+          const name = document.getElementById('name').value;
+          const email = document.getElementById('email').value;
+          // send info to Google Sheets
+          fetch(APPS_SCRIPT_URL, {
+              method: 'POST',
+              mode: 'no-cors',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name: name, email: email })
+          })
+          .then(() => {
+              // send conversion-event to Google Analytics
+              if (typeof gtag === 'function') {
+                  gtag('event', 'sign_up_waitlist', {
+                      'event_category': 'engagement',
+                      'event_label': 'Waitlist Form'
+                  });
+              }
+              
+              document.getElementById('statusMessage').innerText = 'תודה! נרשמת בהצלחה.';
+              document.getElementById('waitlistForm').reset();
+          })
+          .catch(error => {
+              console.error('Error:', error);
+              document.getElementById('statusMessage').innerText = 'ארעה שגיאה, נסה שנית.';
+          });
+      });
+    </script>
 </body>
 </html>
