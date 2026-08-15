@@ -459,7 +459,7 @@ a{color:inherit}
         <h2>קבלו גישה מוקדמת לבטא</h2>
         <p>השאירו פרטים ונעדכן אתכם כשהשירות ייפתח באזורכם.</p>
 
-        <form class="form-grid" action="#" method="post">
+        <form id="waitlistForm" class="form-grid" action="#" method="post" novalidate>
           <div class="field">
             <label for="fullName">שם מלא</label>
             <input id="fullName" name="fullName" type="text" autocomplete="name" placeholder="לדוגמה: ישראל ישראלי">
@@ -470,8 +470,9 @@ a{color:inherit}
             <input id="email" name="email" type="email" inputmode="email" autocomplete="email" placeholder="name@example.com">
           </div>
 
-          <button class="cta-button" type="button">הצטרפות לרשימת ההמתנה</button>
+          <button id="submitButton" class="cta-button" type="submit">הצטרפות לרשימת ההמתנה</button>
         </form>
+        <div id="statusMessage" role="status" aria-live="polite" style="margin-top:12px;font-weight:800;"></div>
 
         <div class="form-note">
           <span>🔒</span>
@@ -560,36 +561,74 @@ a{color:inherit}
 
 </div>
 <script>
-      const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzHuzsm_Lb3PxrILv8QpZ7zNEIgDycbu1ekAbmqTwh7EThP06i8QJ55RUvsd2bdcvgd/exec';
-      document.getElementById('waitlistForm').addEventListener('submit', function(e) {
-          e.preventDefault();
-          
-          const name = document.getElementById('name').value;
-          const email = document.getElementById('email').value;
-          // send info to Google Sheets
-          fetch(APPS_SCRIPT_URL, {
-              method: 'POST',
-              mode: 'no-cors',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ name: name, email: email })
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzHuzsm_Lb3PxrILv8QpZ7zNEIgDycbu1ekAbmqTwh7EThP06i8QJ55RUvsd2bdcvgd/exec';
+
+    const waitlistForm = document.getElementById('waitlistForm');
+    const fullNameInput = document.getElementById('fullName');
+    const emailInput = document.getElementById('email');
+    const submitButton = document.getElementById('submitButton');
+    const statusMessage = document.getElementById('statusMessage');
+
+    waitlistForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const name = fullNameInput.value.trim();
+      const email = emailInput.value.trim().toLowerCase();
+
+      if (name.length < 2) {
+        statusMessage.textContent = 'נא להזין שם מלא.';
+        statusMessage.style.color = '#C2410C';
+        fullNameInput.focus();
+        return;
+      }
+
+      if (!emailInput.checkValidity()) {
+        statusMessage.textContent = 'נא להזין כתובת דוא״ל תקינה.';
+        statusMessage.style.color = '#C2410C';
+        emailInput.focus();
+        return;
+      }
+
+      submitButton.disabled = true;
+      submitButton.style.opacity = '0.7';
+      submitButton.textContent = 'שולח...';
+      statusMessage.textContent = '';
+
+      try {
+        await fetch(APPS_SCRIPT_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8'
+          },
+          body: JSON.stringify({
+            name: name,
+            email: email
           })
-          .then(() => {
-              // send conversion-event to Google Analytics
-              if (typeof gtag === 'function') {
-                  gtag('event', 'sign_up_waitlist', {
-                      'event_category': 'engagement',
-                      'event_label': 'Waitlist Form'
-                  });
-              }
-              
-              document.getElementById('statusMessage').innerText = 'תודה! נרשמת בהצלחה.';
-              document.getElementById('waitlistForm').reset();
-          })
-          .catch(error => {
-              console.error('Error:', error);
-              document.getElementById('statusMessage').innerText = 'ארעה שגיאה, נסה שנית.';
+        });
+
+        if (typeof gtag === 'function') {
+          gtag('event', 'sign_up_waitlist', {
+            event_category: 'engagement',
+            event_label: 'Waitlist Form'
           });
-      });
-    </script>
+        }
+
+        statusMessage.textContent = 'תודה! נרשמת בהצלחה לרשימת ההמתנה.';
+        statusMessage.style.color = '#087D72';
+        waitlistForm.reset();
+
+      } catch (error) {
+        console.error('Waitlist registration error:', error);
+        statusMessage.textContent = 'אירעה שגיאה בשליחת הפרטים. נסה שוב.';
+        statusMessage.style.color = '#C2410C';
+
+      } finally {
+        submitButton.disabled = false;
+        submitButton.style.opacity = '1';
+        submitButton.textContent = 'הצטרפות לרשימת ההמתנה';
+      }
+    });
+  </script>
 </body>
 </html>
